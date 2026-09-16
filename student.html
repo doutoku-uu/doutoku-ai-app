@@ -1341,7 +1341,7 @@
               ) {
 
                 typingArea.textContent =
-                  `🔵 ${student}番は入力中です`;
+                  `🔵 ${student === "1" ? "①" : student === "2" ? "②" : student === "3" ? "③" : "④"}は入力中です`;
 
                 typingArea.style.display =
                   "block";
