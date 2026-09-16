@@ -7,7 +7,6 @@
   <title>道徳授業 - 生徒画面</title>
 
   <style>
-
     body {
       font-family: sans-serif;
       max-width: 900px;
@@ -34,7 +33,6 @@
     }
 
     /* 班のタブ */
-
     .tabs {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -61,7 +59,6 @@
     }
 
     /* 班の内容 */
-
     .group-content {
       display: none;
     }
@@ -71,7 +68,6 @@
     }
 
     /* 回答フォーム */
-
     .student-box {
       border: 1px solid #ccc;
       padding: 20px;
@@ -94,6 +90,11 @@
       resize: vertical;
     }
 
+    textarea:disabled {
+      background-color: #eeeeee;
+      color: #555;
+    }
+
     .submit-button {
       margin-top: 10px;
       padding: 10px 20px;
@@ -107,6 +108,12 @@
 
     .submit-button:hover {
       opacity: 0.8;
+    }
+
+    .submit-button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+      opacity: 1;
     }
 
     .submitted-answer {
@@ -124,43 +131,84 @@
     }
 
     /* 入力中表示 */
-
     .typing-status {
-      margin-bottom: 10px;
-      color: #1976d2;
+      margin-top: 8px;
       font-size: 14px;
-      font-weight: bold;
+      color: #0066cc;
+    }
+
+    /* AIエリア */
+    .ai-area {
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 2px solid #ddd;
+    }
+
+    .ai-button-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
     }
 
     /* AIボタン */
-
     .ai-button {
-      display: block;
       width: 70px;
       height: 70px;
-      margin: 25px auto 10px auto;
       border-radius: 50%;
       border: none;
-      background-color: red;
+      background-color: #d60000;
       color: white;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .ai-button:hover {
-      opacity: 0.8;
+      background-color: #b00000;
     }
 
+    .ai-button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+
+    /* AIボタン横の説明 */
+    .ai-instruction {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #333;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    /* AI処理中表示 */
+    .ai-processing-status {
+      margin-top: 12px;
+      padding: 10px 15px;
+      background-color: #fff3cd;
+      border: 1px solid #ffe69c;
+      border-radius: 6px;
+      color: #664d03;
+      font-size: 15px;
+    }
+
+    /* AI結果 */
     .ai-result {
-      margin: 20px 0;
+      margin-top: 20px;
       padding: 20px;
-      background-color: #fff3f3;
-      border: 2px solid red;
-      border-radius: 10px;
-      font-size: 18px;
-      line-height: 1.8;
+      background-color: #eef7ff;
+      border: 2px solid #99cfff;
+      border-radius: 8px;
       white-space: pre-wrap;
+      line-height: 1.8;
+    }
+
+    .ai-result-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 10px;
     }
 
     @media (max-width: 600px) {
@@ -173,8 +221,16 @@
         font-size: 19px;
       }
 
-    }
+      .ai-button {
+        width: 65px;
+        height: 65px;
+        font-size: 20px;
+      }
 
+      .ai-instruction {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 
@@ -185,7 +241,6 @@
 
 
   <!-- 発問 -->
-
   <div class="box">
 
     <h2>発問</h2>
@@ -201,7 +256,6 @@
 
 
   <!-- 班のタブ -->
-
   <div class="box">
 
     <h2>グループ</h2>
@@ -225,7 +279,6 @@
 
 
     <!-- 班の内容をここに自動生成 -->
-
     <div id="groupsContainer"></div>
 
   </div>
@@ -233,8 +286,11 @@
 
   <script type="module">
 
-    import { initializeApp }
-      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      initializeApp
+    }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
 
     import {
       getFirestore,
@@ -242,11 +298,12 @@
       getDoc,
       setDoc,
       collection,
-      getDocs,
       onSnapshot,
       serverTimestamp,
+      Timestamp,
       runTransaction
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 
     // ========================================
@@ -254,12 +311,24 @@
     // ========================================
 
     const firebaseConfig = {
+
       apiKey: "AIzaSyARE4v_aZn606QafIKt3BoGCg82Fk04lKo",
-      authDomain: "doutokuaiapp.firebaseapp.com",
-      projectId: "doutokuaiapp",
-      storageBucket: "doutokuaiapp.firebasestorage.app",
-      messagingSenderId: "192277542082",
-      appId: "1:192277542082:web:d21654cf75692e0b28375b"
+
+      authDomain:
+        "doutokuaiapp.firebaseapp.com",
+
+      projectId:
+        "doutokuaiapp",
+
+      storageBucket:
+        "doutokuaiapp.firebasestorage.app",
+
+      messagingSenderId:
+        "192277542082",
+
+      appId:
+        "1:192277542082:web:d21654cf75692e0b28375b"
+
     };
 
 
@@ -275,18 +344,23 @@
     // ========================================
 
     const params =
-      new URLSearchParams(window.location.search);
+      new URLSearchParams(
+        window.location.search
+      );
 
     const lessonId =
       params.get("lessonId");
 
 
     // ========================================
-    // このiPadを識別するID
+    // この端末を識別するID
     // ========================================
 
     let clientId =
-      localStorage.getItem("doutokuClientId");
+      localStorage.getItem(
+        "doutokuClientId"
+      );
+
 
     if (!clientId) {
 
@@ -306,36 +380,49 @@
     // ========================================
 
     const groupsContainer =
-      document.getElementById("groupsContainer");
+      document.getElementById(
+        "groupsContainer"
+      );
 
 
-    for (let group = 1; group <= 12; group++) {
+    for (
+      let group = 1;
+      group <= 12;
+      group++
+    ) {
 
       const groupElement =
         document.createElement("div");
 
-      groupElement.className = "group-content";
+
+      groupElement.className =
+        "group-content";
+
 
       if (group === 1) {
-        groupElement.classList.add("active");
+
+        groupElement.classList.add(
+          "active"
+        );
+
       }
 
-      groupElement.dataset.groupContent = group;
+
+      groupElement.dataset.groupContent =
+        group;
 
 
       groupElement.innerHTML = `
 
         <h2>${group}班</h2>
 
+
+        <!-- ① -->
         <div class="student-box">
 
-          <div class="student-title">①</div>
-
-          <div
-            id="typing-${group}-1"
-            class="typing-status"
-            style="display:none;"
-          ></div>
+          <div class="student-title">
+            ①
+          </div>
 
           <textarea
             id="answer-${group}-1"
@@ -358,6 +445,11 @@
           ></div>
 
           <div
+            id="typing-${group}-1"
+            class="typing-status"
+          ></div>
+
+          <div
             id="submitted-${group}-1"
             class="submitted-answer"
             style="display:none;"
@@ -366,15 +458,12 @@
         </div>
 
 
+        <!-- ② -->
         <div class="student-box">
 
-          <div class="student-title">②</div>
-
-          <div
-            id="typing-${group}-2"
-            class="typing-status"
-            style="display:none;"
-          ></div>
+          <div class="student-title">
+            ②
+          </div>
 
           <textarea
             id="answer-${group}-2"
@@ -397,6 +486,11 @@
           ></div>
 
           <div
+            id="typing-${group}-2"
+            class="typing-status"
+          ></div>
+
+          <div
             id="submitted-${group}-2"
             class="submitted-answer"
             style="display:none;"
@@ -405,15 +499,12 @@
         </div>
 
 
+        <!-- ③ -->
         <div class="student-box">
 
-          <div class="student-title">③</div>
-
-          <div
-            id="typing-${group}-3"
-            class="typing-status"
-            style="display:none;"
-          ></div>
+          <div class="student-title">
+            ③
+          </div>
 
           <textarea
             id="answer-${group}-3"
@@ -436,6 +527,11 @@
           ></div>
 
           <div
+            id="typing-${group}-3"
+            class="typing-status"
+          ></div>
+
+          <div
             id="submitted-${group}-3"
             class="submitted-answer"
             style="display:none;"
@@ -444,15 +540,12 @@
         </div>
 
 
+        <!-- ④ -->
         <div class="student-box">
 
-          <div class="student-title">④</div>
-
-          <div
-            id="typing-${group}-4"
-            class="typing-status"
-            style="display:none;"
-          ></div>
+          <div class="student-title">
+            ④
+          </div>
 
           <textarea
             id="answer-${group}-4"
@@ -475,6 +568,11 @@
           ></div>
 
           <div
+            id="typing-${group}-4"
+            class="typing-status"
+          ></div>
+
+          <div
             id="submitted-${group}-4"
             class="submitted-answer"
             style="display:none;"
@@ -483,23 +581,58 @@
         </div>
 
 
-        <button
-          class="ai-button"
-          data-group="${group}"
-        >
-          AI
-        </button>
+        <!-- AI -->
+        <div class="ai-area">
 
-        <div
-          id="ai-result-${group}"
-          class="ai-result"
-          style="display:none;"
-        ></div>
+          <div class="ai-button-row">
+
+            <button
+              class="ai-button"
+              data-group="${group}"
+            >
+              AI
+            </button>
+
+            <div class="ai-instruction">
+              班のメンバーの回答がすべて表示されたら、班の１人が１回だけボタンを押してください。
+            </div>
+
+          </div>
+
+
+          <div
+            id="ai-processing-${group}"
+            class="ai-processing-status"
+            style="display:none;"
+          >
+            AIが処理中です。少し待ってください。
+          </div>
+
+
+          <div
+            id="ai-result-${group}"
+            class="ai-result"
+            style="display:none;"
+          >
+
+            <div class="ai-result-title">
+              AIからの問い
+            </div>
+
+            <div
+              id="ai-result-text-${group}"
+            ></div>
+
+          </div>
+
+        </div>
 
       `;
 
 
-      groupsContainer.appendChild(groupElement);
+      groupsContainer.appendChild(
+        groupElement
+      );
 
     }
 
@@ -508,40 +641,58 @@
     // 授業情報を取得
     // ========================================
 
+    let lessonData = null;
+
+
     async function loadLesson() {
 
       if (!lessonId) {
 
-        document.getElementById("question").textContent =
+        document.getElementById(
+          "question"
+        ).textContent =
           "授業IDが指定されていません。";
 
         return;
+
       }
 
 
       try {
 
         const lessonRef =
-          doc(db, "lessons", lessonId);
+          doc(
+            db,
+            "lessons",
+            lessonId
+          );
+
 
         const lessonSnap =
-          await getDoc(lessonRef);
+          await getDoc(
+            lessonRef
+          );
 
 
         if (!lessonSnap.exists()) {
 
-          document.getElementById("question").textContent =
+          document.getElementById(
+            "question"
+          ).textContent =
             "授業が見つかりませんでした。";
 
           return;
+
         }
 
 
-        const lessonData =
+        lessonData =
           lessonSnap.data();
 
 
-        document.getElementById("question").textContent =
+        document.getElementById(
+          "question"
+        ).textContent =
           lessonData.question || "";
 
 
@@ -549,7 +700,10 @@
 
         console.error(error);
 
-        document.getElementById("question").textContent =
+
+        document.getElementById(
+          "question"
+        ).textContent =
           "授業情報の取得中にエラーが発生しました。";
 
       }
@@ -565,96 +719,164 @@
     // ========================================
 
     const tabs =
-      document.querySelectorAll(".tab");
+      document.querySelectorAll(
+        ".tab"
+      );
+
 
     const groupContents =
-      document.querySelectorAll(".group-content");
+      document.querySelectorAll(
+        ".group-content"
+      );
 
 
     tabs.forEach(tab => {
 
-      tab.addEventListener("click", () => {
+      tab.addEventListener(
+        "click",
+        () => {
 
-        const group =
-          tab.dataset.group;
-
-
-        tabs.forEach(otherTab => {
-
-          otherTab.classList.remove("active");
-
-        });
-
-        tab.classList.add("active");
+          const group =
+            tab.dataset.group;
 
 
-        groupContents.forEach(content => {
+          tabs.forEach(
+            otherTab => {
 
-          content.classList.remove("active");
+              otherTab.classList.remove(
+                "active"
+              );
 
-        });
-
-
-        const selectedContent =
-          document.querySelector(
-            `[data-group-content="${group}"]`
+            }
           );
 
 
-        if (selectedContent) {
+          tab.classList.add(
+            "active"
+          );
 
-          selectedContent.classList.add("active");
+
+          groupContents.forEach(
+            content => {
+
+              content.classList.remove(
+                "active"
+              );
+
+            }
+          );
+
+
+          const selectedContent =
+            document.querySelector(
+              `[data-group-content="${group}"]`
+            );
+
+
+          if (selectedContent) {
+
+            selectedContent.classList.add(
+              "active"
+            );
+
+          }
 
         }
-
-      });
+      );
 
     });
 
 
     // ========================================
-    // 入力中表示
+    // 入力中表示のタイマー
     // ========================================
 
     const typingTimers = {};
 
+
+    function clearTyping(
+      group,
+      student
+    ) {
+
+      const answerRef =
+        doc(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group),
+          "responses",
+          String(student)
+        );
+
+
+      setDoc(
+        answerRef,
+        {
+          isTyping: false,
+          typingClientId: null
+        },
+        {
+          merge: true
+        }
+      ).catch(error => {
+
+        console.error(
+          "入力中状態の解除エラー:",
+          error
+        );
+
+      });
+
+    }
+
+
+    // ========================================
+    // 回答入力中の処理
+    // ========================================
+
     const textareas =
-      document.querySelectorAll("textarea");
+      document.querySelectorAll(
+        "textarea"
+      );
 
 
     textareas.forEach(textarea => {
 
-      textarea.addEventListener("input", async () => {
+      textarea.addEventListener(
+        "input",
+        () => {
 
-        const id =
-          textarea.id;
-
-        const parts =
-          id.split("-");
-
-        const group =
-          parts[1];
-
-        const student =
-          parts[2];
+          const id =
+            textarea.id;
 
 
-        const answerRef =
-          doc(
-            db,
-            "lessons",
-            lessonId,
-            "groups",
-            String(group),
-            "responses",
-            String(student)
-          );
+          const parts =
+            id.split("-");
 
 
-        try {
+          const group =
+            parts[1];
 
-          // 入力中であることをFirestoreに保存
-          await setDoc(
+
+          const student =
+            parts[2];
+
+
+          const answerRef =
+            doc(
+              db,
+              "lessons",
+              lessonId,
+              "groups",
+              String(group),
+              "responses",
+              String(student)
+            );
+
+
+          setDoc(
             answerRef,
             {
               isTyping: true,
@@ -664,414 +886,72 @@
             {
               merge: true
             }
-          );
+          ).catch(error => {
 
-
-          // 以前のタイマーを解除
-          if (typingTimers[id]) {
-            clearTimeout(typingTimers[id]);
-          }
-
-
-          // 5秒間入力がなければ入力中を解除
-          typingTimers[id] =
-            setTimeout(async () => {
-
-              try {
-
-                const currentValue =
-                  textarea.value.trim();
-
-
-                // すでに回答を保存している場合は、
-                // 入力中だけ解除する
-                await setDoc(
-                  answerRef,
-                  {
-                    isTyping: false
-                  },
-                  {
-                    merge: true
-                  }
-                );
-
-              } catch (error) {
-
-                console.error(
-                  "入力中状態の解除エラー:",
-                  error
-                );
-
-              }
-
-            }, 5000);
-
-
-        } catch (error) {
-
-          console.error(
-            "入力中状態の保存エラー:",
-            error
-          );
-
-        }
-
-      });
-
-
-      // ========================================
-      // 入力欄から離れたとき
-      // ========================================
-
-      textarea.addEventListener("blur", async () => {
-
-        const id =
-          textarea.id;
-
-        const parts =
-          id.split("-");
-
-        const group =
-          parts[1];
-
-        const student =
-          parts[2];
-
-
-        const answerRef =
-          doc(
-            db,
-            "lessons",
-            lessonId,
-            "groups",
-            String(group),
-            "responses",
-            String(student)
-          );
-
-
-        if (typingTimers[id]) {
-          clearTimeout(typingTimers[id]);
-        }
-
-
-        try {
-
-          await setDoc(
-            answerRef,
-            {
-              isTyping: false
-            },
-            {
-              merge: true
-            }
-          );
-
-        } catch (error) {
-
-          console.error(
-            "入力中状態の解除エラー:",
-            error
-          );
-
-        }
-
-      });
-
-    });
-
-
-    // ========================================
-    // AIボタン
-    // ========================================
-
-    const aiButtons =
-      document.querySelectorAll(".ai-button");
-
-
-    const GAS_URL =
-      "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
-
-
-    aiButtons.forEach(button => {
-
-      button.addEventListener("click", async () => {
-
-        const group =
-          button.dataset.group;
-
-
-        button.disabled = true;
-
-
-        const originalText =
-          button.textContent;
-
-
-        button.textContent =
-          "生成中…";
-
-
-        try {
-
-          // ① 授業情報をFirestoreから取得
-
-          const lessonRef =
-            doc(db, "lessons", lessonId);
-
-
-          const lessonSnapshot =
-            await getDoc(lessonRef);
-
-
-          if (!lessonSnapshot.exists()) {
-
-            throw new Error(
-              "授業情報が見つかりません。"
+            console.error(
+              "入力中状態の保存エラー:",
+              error
             );
-
-          }
-
-
-          const lessonData =
-            lessonSnapshot.data();
-
-
-          // ② この班の回答をFirestoreから取得
-
-          const responsesRef =
-            collection(
-              db,
-              "lessons",
-              lessonId,
-              "groups",
-              String(group),
-              "responses"
-            );
-
-
-          const snapshot =
-            await getDocs(responsesRef);
-
-
-          const answers = [];
-
-
-          snapshot.forEach(docSnapshot => {
-
-            const data =
-              docSnapshot.data();
-
-
-            if (
-              data.answer &&
-              data.answer.trim() !== ""
-            ) {
-
-              answers.push(data.answer);
-
-            }
 
           });
 
 
-          // ③ GASへ送るデータ
-
-          const requestData = {
-
-            question:
-              lessonData.question || "",
-
-            mainContentItem:
-              lessonData.mainContentItem || "",
-
-            relatedContentItems:
-              lessonData.relatedContentItems || [],
-
-            answers:
-              answers
-
-          };
-
-
-          console.log(
-            "GASへ送信するデータ:",
-            requestData
+          clearTimeout(
+            typingTimers[id]
           );
 
 
-          // ④ GASを呼び出す
+          typingTimers[id] =
+            setTimeout(
+              () => {
 
-          const response =
-            await fetch(
-              GAS_URL,
-              {
-                method: "POST",
+                clearTyping(
+                  group,
+                  student
+                );
 
-                headers: {
-                  "Content-Type":
-                    "text/plain;charset=utf-8"
-                },
-
-                body:
-                  JSON.stringify(requestData)
-              }
+              },
+              5000
             );
-
-
-          if (!response.ok) {
-
-            throw new Error(
-              "GASとの通信に失敗しました。HTTP " +
-              response.status
-            );
-
-          }
-
-
-          const result =
-            await response.json();
-
-
-          console.log(
-            "GASからの結果:",
-            result
-          );
-
-
-          if (!result.success) {
-
-            throw new Error(
-              result.error ||
-              "AIでの発問生成に失敗しました。"
-            );
-
-          }
-
-
-          // ⑤ AIの発問をFirestoreに保存
-
-          const aiResultRef =
-            doc(
-              db,
-              "lessons",
-              lessonId,
-              "groups",
-              String(group)
-            );
-
-
-          await setDoc(
-            aiResultRef,
-            {
-              aiResult:
-                result.result,
-
-              aiUpdatedAt:
-                serverTimestamp()
-            },
-            {
-              merge: true
-            }
-          );
-
-
-        } catch (error) {
-
-          console.error(
-            "AI処理エラー:",
-            error
-          );
-
-
-          alert(
-            "AIによる発問生成中にエラーが発生しました。\n\n" +
-            error.message
-          );
-
-
-        } finally {
-
-          button.disabled =
-            false;
-
-          button.textContent =
-            originalText;
 
         }
-
-      });
-
-    });
-
-
-    // ========================================
-    // AI発問をFirestoreからリアルタイム取得
-    // ========================================
-
-    for (let group = 1; group <= 12; group++) {
-
-      const groupRef =
-        doc(
-          db,
-          "lessons",
-          lessonId,
-          "groups",
-          String(group)
-        );
-
-
-      onSnapshot(
-        groupRef,
-
-        (snapshot) => {
-
-          if (!snapshot.exists()) {
-            return;
-          }
-
-
-          const data =
-            snapshot.data();
-
-
-          const aiResultArea =
-            document.getElementById(
-              `ai-result-${group}`
-            );
-
-
-          if (!aiResultArea) {
-            return;
-          }
-
-
-          if (data.aiResult) {
-
-            aiResultArea.textContent =
-              "🤖 AIからの発問\n\n" +
-              data.aiResult;
-
-
-            aiResultArea.style.display =
-              "block";
-
-          }
-
-        },
-
-        (error) => {
-
-          console.error(
-            "AI発問のリアルタイム取得エラー:",
-            error
-          );
-
-        }
-
       );
 
-    }
+
+      textarea.addEventListener(
+        "blur",
+        () => {
+
+          const id =
+            textarea.id;
+
+
+          const parts =
+            id.split("-");
+
+
+          const group =
+            parts[1];
+
+
+          const student =
+            parts[2];
+
+
+          clearTimeout(
+            typingTimers[id]
+          );
+
+
+          clearTyping(
+            group,
+            student
+          );
+
+        }
+      );
+
+    });
 
 
     // ========================================
@@ -1079,7 +959,9 @@
     // ========================================
 
     const submitButtons =
-      document.querySelectorAll(".submit-button");
+      document.querySelectorAll(
+        ".submit-button"
+      );
 
 
     submitButtons.forEach(button => {
@@ -1090,6 +972,7 @@
 
           const group =
             button.dataset.group;
+
 
           const student =
             button.dataset.student;
@@ -1139,33 +1022,34 @@
               );
 
 
-            // すでに別の生徒が使っていないか確認
+            /*
+             * すでに別の端末が回答を保存している場合は
+             * 上書きしない。
+             */
             await runTransaction(
               db,
-              async (transaction) => {
+              async transaction => {
 
-                const answerSnapshot =
+                const answerSnap =
                   await transaction.get(
                     answerRef
                   );
 
 
-                if (answerSnapshot.exists()) {
+                const existingData =
+                  answerSnap.exists()
+                    ? answerSnap.data()
+                    : {};
 
-                  const existingData =
-                    answerSnapshot.data();
 
+                if (
+                  existingData.answer &&
+                  existingData.answer.trim() !== ""
+                ) {
 
-                  if (
-                    existingData.answer &&
-                    existingData.answer.trim() !== ""
-                  ) {
-
-                    throw new Error(
-                      "この回答欄はすでに使用されています。"
-                    );
-
-                  }
+                  throw new Error(
+                    "この回答欄はすでに使用されています。"
+                  );
 
                 }
 
@@ -1173,20 +1057,11 @@
                 transaction.set(
                   answerRef,
                   {
-                    answer:
-                      answer,
-
+                    answer: answer,
                     updatedAt:
                       serverTimestamp(),
-
-                    isTyping:
-                      false,
-
-                    typingClientId:
-                      null,
-
-                    typingAt:
-                      null
+                    isTyping: false,
+                    typingClientId: null
                   },
                   {
                     merge: true
@@ -1201,15 +1076,6 @@
               "回答を保存しました。";
 
 
-            // 保存後は入力欄を編集できないようにする
-
-            textarea.disabled =
-              true;
-
-            button.disabled =
-              true;
-
-
           } catch (error) {
 
             console.error(error);
@@ -1221,9 +1087,7 @@
             ) {
 
               status.textContent =
-                "この回答欄はすでに別の人が使用しています。別の欄を使ってください。";
-
-              textarea.value = "";
+                "この回答欄はすでに使用されています。";
 
             } else {
 
@@ -1241,11 +1105,14 @@
 
 
     // ========================================
-    // Firestoreの回答・入力中状態を
-    // リアルタイム表示
+    // Firestoreの回答をリアルタイム表示
     // ========================================
 
-    for (let group = 1; group <= 12; group++) {
+    for (
+      let group = 1;
+      group <= 12;
+      group++
+    ) {
 
       const responsesRef =
         collection(
@@ -1260,11 +1127,10 @@
 
       onSnapshot(
         responsesRef,
-
-        (snapshot) => {
+        snapshot => {
 
           snapshot.forEach(
-            (docSnapshot) => {
+            docSnapshot => {
 
               const student =
                 docSnapshot.id;
@@ -1273,10 +1139,6 @@
               const data =
                 docSnapshot.data();
 
-
-              // ------------------------------
-              // 回答表示
-              // ------------------------------
 
               const answerArea =
                 document.getElementById(
@@ -1290,38 +1152,11 @@
                 );
 
 
-              if (!answerArea) {
-                return;
-              }
+              const submitButton =
+                document.querySelector(
+                  `.submit-button[data-group="${group}"][data-student="${student}"]`
+                );
 
-
-              if (data.answer) {
-
-                answerArea.textContent =
-                  data.answer;
-
-                answerArea.style.display =
-                  "block";
-
-
-                // 保存された回答を
-                // 入力欄にも表示
-
-                if (
-                  document.activeElement !== textarea
-                ) {
-
-                  textarea.value =
-                    data.answer;
-
-                }
-
-              }
-
-
-              // ------------------------------
-              // 入力中表示
-              // ------------------------------
 
               const typingArea =
                 document.getElementById(
@@ -1329,10 +1164,60 @@
                 );
 
 
-              if (!typingArea) {
+              if (!answerArea) {
                 return;
               }
 
+
+              // --------------------------------
+              // 保存された回答
+              // --------------------------------
+
+              if (data.answer) {
+
+                answerArea.textContent =
+                  data.answer;
+
+
+                answerArea.style.display =
+                  "block";
+
+
+                /*
+                 * 現在入力中の本人の画面を
+                 * Firestoreの更新で上書きしない
+                 */
+                if (
+                  document.activeElement !==
+                  textarea
+                ) {
+
+                  textarea.value =
+                    data.answer;
+
+                }
+
+
+                /*
+                 * 回答済みの欄は全端末で
+                 * 編集・再利用できないようにする
+                 */
+                textarea.disabled = true;
+
+
+                if (submitButton) {
+
+                  submitButton.disabled =
+                    true;
+
+                }
+
+              }
+
+
+              // --------------------------------
+              // 入力中表示
+              // --------------------------------
 
               if (
                 data.isTyping === true &&
@@ -1341,15 +1226,12 @@
               ) {
 
                 typingArea.textContent =
-                  `🔵 ${student === "1" ? "①" : student === "2" ? "②" : student === "3" ? "③" : "④"}は入力中です`;
-
-                typingArea.style.display =
-                  "block";
+                  `🔵 ${student}は入力中です`;
 
               } else {
 
-                typingArea.style.display =
-                  "none";
+                typingArea.textContent =
+                  "";
 
               }
 
@@ -1357,8 +1239,7 @@
           );
 
         },
-
-        (error) => {
+        error => {
 
           console.error(
             "リアルタイム取得エラー:",
@@ -1366,7 +1247,596 @@
           );
 
         }
+      );
 
+    }
+
+
+    // ========================================
+    // AIボタン
+    // ========================================
+
+    const aiButtons =
+      document.querySelectorAll(
+        ".ai-button"
+      );
+
+
+    const GAS_URL =
+      "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
+
+
+    aiButtons.forEach(button => {
+
+      button.addEventListener(
+        "click",
+        async () => {
+
+          const group =
+            button.dataset.group;
+
+
+          const processingArea =
+            document.getElementById(
+              `ai-processing-${group}`
+            );
+
+
+          /*
+           * ====================================
+           * AI処理ロックを取得
+           * ====================================
+           *
+           * AさんとBさんがほぼ同時に押しても、
+           * Firestoreのトランザクションによって
+           * どちらか一方だけがロックを取得する。
+           */
+
+          const groupRef =
+            doc(
+              db,
+              "lessons",
+              lessonId,
+              "groups",
+              String(group)
+            );
+
+
+          let lockAcquired =
+            false;
+
+
+          try {
+
+            await runTransaction(
+              db,
+              async transaction => {
+
+                const groupSnap =
+                  await transaction.get(
+                    groupRef
+                  );
+
+
+                const groupData =
+                  groupSnap.exists()
+                    ? groupSnap.data()
+                    : {};
+
+
+                if (
+                  groupData.aiProcessing === true
+                ) {
+
+                  /*
+                   * 2分以上経過しているロックは
+                   * 前の端末が異常終了した可能性があるため
+                   * 古いロックとして扱う。
+                   */
+
+                  let isStale =
+                    false;
+
+
+                  if (
+                    groupData.aiProcessingAt
+                  ) {
+
+                    const processingTime =
+                      groupData.aiProcessingAt.toMillis();
+
+
+                    const now =
+                      Date.now();
+
+
+                    const elapsed =
+                      now - processingTime;
+
+
+                    if (
+                      elapsed >
+                      2 * 60 * 1000
+                    ) {
+
+                      isStale =
+                        true;
+
+                    }
+
+                  }
+
+
+                  if (!isStale) {
+
+                    throw new Error(
+                      "AI処理中です。少し待ってください。"
+                    );
+
+                  }
+
+                }
+
+
+                transaction.set(
+                  groupRef,
+                  {
+                    aiProcessing: true,
+                    aiProcessingClientId:
+                      clientId,
+                    aiProcessingAt:
+                      Timestamp.now()
+                  },
+                  {
+                    merge: true
+                  }
+                );
+
+
+                lockAcquired =
+                  true;
+
+              }
+            );
+
+
+            if (!lockAcquired) {
+
+              return;
+
+            }
+
+
+            // --------------------------------
+            // AI処理中表示
+            // --------------------------------
+
+            processingArea.style.display =
+              "block";
+
+
+            button.disabled =
+              true;
+
+
+            button.textContent =
+              "生成中…";
+
+
+            // =================================
+            // 授業情報を再取得
+            // =================================
+
+            const lessonRef =
+              doc(
+                db,
+                "lessons",
+                lessonId
+              );
+
+
+            const lessonSnap =
+              await getDoc(
+                lessonRef
+              );
+
+
+            if (!lessonSnap.exists()) {
+
+              throw new Error(
+                "授業情報が見つかりません。"
+              );
+
+            }
+
+
+            const currentLessonData =
+              lessonSnap.data();
+
+
+            // =================================
+            // 班の回答を取得
+            // =================================
+
+            const responsesRef =
+              collection(
+                db,
+                "lessons",
+                lessonId,
+                "groups",
+                String(group),
+                "responses"
+              );
+
+
+            const responsesSnap =
+              await new Promise(
+                (resolve, reject) => {
+
+                  const unsubscribe =
+                    onSnapshot(
+                      responsesRef,
+                      snapshot => {
+
+                        unsubscribe();
+
+                        resolve(
+                          snapshot
+                        );
+
+                      },
+                      error => {
+
+                        unsubscribe();
+
+                        reject(
+                          error
+                        );
+
+                      }
+                    );
+
+                }
+              );
+
+
+            const answers = [];
+
+
+            responsesSnap.forEach(
+              docSnapshot => {
+
+                const data =
+                  docSnapshot.data();
+
+
+                if (
+                  data.answer &&
+                  data.answer.trim() !== ""
+                ) {
+
+                  answers.push(
+                    {
+                      number:
+                        docSnapshot.id,
+                      answer:
+                        data.answer
+                    }
+                  );
+
+                }
+
+              }
+            );
+
+
+            // =================================
+            // GASへ送信
+            // =================================
+
+            const response =
+              await fetch(
+                GAS_URL,
+                {
+                  method: "POST",
+
+                  headers: {
+                    "Content-Type":
+                      "text/plain;charset=utf-8"
+                  },
+
+                  body: JSON.stringify(
+                    {
+                      question:
+                        currentLessonData.question || "",
+
+                      mainContentItem:
+                        currentLessonData.mainContentItem || "",
+
+                      relatedContentItems:
+                        currentLessonData.relatedContentItems || [],
+
+                      answers:
+                        answers
+                    }
+                  )
+                }
+              );
+
+
+            if (!response.ok) {
+
+              throw new Error(
+                "AIサーバーとの通信に失敗しました。"
+              );
+
+            }
+
+
+            const result =
+              await response.json();
+
+
+            /*
+             * GASから返ってくるAI回答を取得
+             */
+            const aiText =
+              result.result ||
+              result.text ||
+              result.answer ||
+              "";
+
+
+            if (!aiText) {
+
+              throw new Error(
+                "AIから回答を取得できませんでした。"
+              );
+
+            }
+
+
+            // =================================
+            // AI結果をFirestoreに保存
+            // =================================
+
+            await setDoc(
+              groupRef,
+              {
+                aiResult:
+                  aiText,
+
+                aiUpdatedAt:
+                  serverTimestamp()
+              },
+              {
+                merge: true
+              }
+            );
+
+
+          } catch (error) {
+
+            console.error(
+              "AI処理エラー:",
+              error
+            );
+
+
+            if (
+              error.message ===
+              "AI処理中です。少し待ってください。"
+            ) {
+
+              alert(
+                "この班では、すでにAIが処理中です。\n少し待ってください。"
+              );
+
+            } else {
+
+              alert(
+                "AI処理中にエラーが発生しました。\nもう一度お試しください。"
+              );
+
+            }
+
+          } finally {
+
+            /*
+             * =================================
+             * AI処理ロックを解除
+             * =================================
+             *
+             * 自分が取得したロックだけを解除する。
+             * 別の端末が取得したロックは解除しない。
+             */
+
+            try {
+
+              const latestGroupSnap =
+                await getDoc(
+                  groupRef
+                );
+
+
+              if (
+                latestGroupSnap.exists()
+              ) {
+
+                const latestData =
+                  latestGroupSnap.data();
+
+
+                if (
+                  latestData.aiProcessingClientId ===
+                  clientId
+                ) {
+
+                  await setDoc(
+                    groupRef,
+                    {
+                      aiProcessing: false,
+                      aiProcessingClientId:
+                        null,
+                      aiProcessingAt:
+                        null
+                    },
+                    {
+                      merge: true
+                    }
+                  );
+
+                }
+
+              }
+
+            } catch (unlockError) {
+
+              console.error(
+                "AIロック解除エラー:",
+                unlockError
+              );
+
+            }
+
+          }
+
+        }
+      );
+
+    });
+
+
+    // ========================================
+    // AI状態・AI結果をリアルタイム表示
+    // ========================================
+
+    for (
+      let group = 1;
+      group <= 12;
+      group++
+    ) {
+
+      const groupRef =
+        doc(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group)
+        );
+
+
+      onSnapshot(
+        groupRef,
+        snapshot => {
+
+          if (!snapshot.exists()) {
+            return;
+          }
+
+
+          const data =
+            snapshot.data();
+
+
+          const aiButton =
+            document.querySelector(
+              `.ai-button[data-group="${group}"]`
+            );
+
+
+          const processingArea =
+            document.getElementById(
+              `ai-processing-${group}`
+            );
+
+
+          const resultArea =
+            document.getElementById(
+              `ai-result-${group}`
+            );
+
+
+          const resultText =
+            document.getElementById(
+              `ai-result-text-${group}`
+            );
+
+
+          // --------------------------------
+          // AI処理中
+          // --------------------------------
+
+          if (
+            data.aiProcessing === true
+          ) {
+
+            processingArea.style.display =
+              "block";
+
+
+            aiButton.disabled =
+              true;
+
+
+            if (
+              data.aiProcessingClientId ===
+              clientId
+            ) {
+
+              aiButton.textContent =
+                "生成中…";
+
+            } else {
+
+              aiButton.textContent =
+                "待機中";
+
+            }
+
+          } else {
+
+            processingArea.style.display =
+              "none";
+
+
+            aiButton.disabled =
+              false;
+
+
+            aiButton.textContent =
+              "AI";
+
+          }
+
+
+          // --------------------------------
+          // AI結果
+          // --------------------------------
+
+          if (
+            data.aiResult
+          ) {
+
+            resultArea.style.display =
+              "block";
+
+
+            resultText.textContent =
+              data.aiResult;
+
+          }
+
+        },
+        error => {
+
+          console.error(
+            "AI状態取得エラー:",
+            error
+          );
+
+        }
       );
 
     }
