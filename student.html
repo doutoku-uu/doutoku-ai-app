@@ -154,6 +154,16 @@
 .ai-button:hover {
   opacity: 0.8;
 }
+.ai-result {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #fff3f3;
+  border: 2px solid red;
+  border-radius: 10px;
+  font-size: 18px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
   </style>
 </head>
 
@@ -422,7 +432,7 @@
         >
           AI
         </button>
-
+<div id="ai-result-${group}" class="ai-result" style="display:none;"></div>
       `;
 
 
@@ -547,117 +557,288 @@ const aiButtons = document.querySelectorAll(".ai-button");
 // GAS WebアプリのURL
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
 
+
+// ========================================
+// AIボタンを押したときの処理
+// ========================================
+
 aiButtons.forEach(button => {
+
   button.addEventListener("click", async () => {
+
     const group = button.dataset.group;
 
     // 二重クリック防止
     button.disabled = true;
+
     const originalText = button.textContent;
+
     button.textContent = "生成中…";
 
+
     try {
+
       // ----------------------------------------
       // ① 授業情報をFirestoreから取得
       // ----------------------------------------
-      const lessonRef = doc(db, "lessons", lessonId);
-      const lessonSnapshot = await getDoc(lessonRef);
+
+      const lessonRef =
+        doc(db, "lessons", lessonId);
+
+      const lessonSnapshot =
+        await getDoc(lessonRef);
+
 
       if (!lessonSnapshot.exists()) {
         throw new Error("授業情報が見つかりません。");
       }
 
-      const lessonData = lessonSnapshot.data();
+
+      const lessonData =
+        lessonSnapshot.data();
+
 
       // ----------------------------------------
       // ② この班の回答をFirestoreから取得
       // ----------------------------------------
-      const responsesRef = collection(
-        db,
-        "lessons",
-        lessonId,
-        "groups",
-        String(group),
-        "responses"
-      );
 
-      const snapshot = await getDocs(responsesRef);
+      const responsesRef =
+        collection(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group),
+          "responses"
+        );
+
+
+      const snapshot =
+        await getDocs(responsesRef);
+
 
       const answers = [];
 
-      snapshot.forEach(docSnapshot => {
-        const data = docSnapshot.data();
 
-        if (data.answer && data.answer.trim() !== "") {
+      snapshot.forEach(docSnapshot => {
+
+        const data =
+          docSnapshot.data();
+
+
+        if (
+          data.answer &&
+          data.answer.trim() !== ""
+        ) {
+
           answers.push(data.answer);
+
         }
+
       });
+
 
       // ----------------------------------------
       // ③ GASへ送るデータ
       // ----------------------------------------
+
       const requestData = {
-        question: lessonData.question || "",
-        mainContentItem: lessonData.mainContentItem || "",
+
+        question:
+          lessonData.question || "",
+
+        mainContentItem:
+          lessonData.mainContentItem || "",
+
         relatedContentItems:
           lessonData.relatedContentItems || [],
-        answers: answers
+
+        answers:
+          answers
+
       };
 
-      console.log("GASへ送信するデータ:", requestData);
+
+      console.log(
+        "GASへ送信するデータ:",
+        requestData
+      );
+
 
       // ----------------------------------------
       // ④ GASを呼び出す
       // ----------------------------------------
-      const response = await fetch(GAS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(requestData)
-      });
+
+      const response =
+        await fetch(GAS_URL, {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "text/plain;charset=utf-8"
+          },
+
+          body:
+            JSON.stringify(requestData)
+
+        });
+
 
       if (!response.ok) {
+
         throw new Error(
           "GASとの通信に失敗しました。HTTP " +
           response.status
         );
+
       }
 
-      const result = await response.json();
 
-      console.log("GASからの結果:", result);
+      const result =
+        await response.json();
+
+
+      console.log(
+        "GASからの結果:",
+        result
+      );
+
 
       if (!result.success) {
+
         throw new Error(
-          result.error || "AIでの発問生成に失敗しました。"
+          result.error ||
+          "AIでの発問生成に失敗しました。"
         );
+
       }
 
+
       // ----------------------------------------
-      // ⑤ AIの発問を表示
+      // ⑤ AIの発問をFirestoreに保存
       // ----------------------------------------
-      alert(
-        `${group}班のAIによる発問\n\n` +
-        result.result
+
+      const aiResultRef =
+        doc(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group)
+        );
+
+
+      await setDoc(
+        aiResultRef,
+        {
+          aiResult:
+            result.result,
+
+          aiUpdatedAt:
+            serverTimestamp()
+        },
+        {
+          merge: true
+        }
       );
+
 
     } catch (error) {
 
-      console.error("AI処理エラー:", error);
+      console.error(
+        "AI処理エラー:",
+        error
+      );
+
 
       alert(
         "AIによる発問生成中にエラーが発生しました。\n\n" +
         error.message
       );
 
+
     } finally {
 
       button.disabled = false;
-      button.textContent = originalText;
+
+      button.textContent =
+        originalText;
+
     }
+
   });
+
 });
+
+
+// ========================================
+// AI発問をFirestoreからリアルタイム取得
+// ========================================
+
+for (let group = 1; group <= 12; group++) {
+
+  const groupRef =
+    doc(
+      db,
+      "lessons",
+      lessonId,
+      "groups",
+      String(group)
+    );
+
+
+  onSnapshot(
+    groupRef,
+
+    (snapshot) => {
+
+      if (!snapshot.exists()) {
+        return;
+      }
+
+
+      const data =
+        snapshot.data();
+
+
+      const aiResultArea =
+        document.getElementById(
+          `ai-result-${group}`
+        );
+
+
+      if (!aiResultArea) {
+        return;
+      }
+
+
+      if (data.aiResult) {
+
+        aiResultArea.textContent =
+          "🤖 AIからの発問\n\n" +
+          data.aiResult;
+
+
+        aiResultArea.style.display =
+          "block";
+
+      }
+
+    },
+
+    (error) => {
+
+      console.error(
+        "AI発問のリアルタイム取得エラー:",
+        error
+      );
+
+    }
+
+  );
+
+}
     // ========================================
     // 回答をFirestoreに保存
     // ========================================
