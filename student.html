@@ -33,7 +33,6 @@
       margin-top: 15px;
     }
 
-
     /* 班のタブ */
 
     .tabs {
@@ -61,7 +60,6 @@
       color: white;
     }
 
-
     /* 班の内容 */
 
     .group-content {
@@ -71,7 +69,6 @@
     .group-content.active {
       display: block;
     }
-
 
     /* 回答フォーム */
 
@@ -126,6 +123,46 @@
       font-size: 14px;
     }
 
+    /* 入力中表示 */
+
+    .typing-status {
+      margin-bottom: 10px;
+      color: #1976d2;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    /* AIボタン */
+
+    .ai-button {
+      display: block;
+      width: 70px;
+      height: 70px;
+      margin: 25px auto 10px auto;
+      border-radius: 50%;
+      border: none;
+      background-color: red;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .ai-button:hover {
+      opacity: 0.8;
+    }
+
+    .ai-result {
+      margin: 20px 0;
+      padding: 20px;
+      background-color: #fff3f3;
+      border: 2px solid red;
+      border-radius: 10px;
+      font-size: 18px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
     @media (max-width: 600px) {
 
       .tabs {
@@ -137,33 +174,7 @@
       }
 
     }
-.ai-button {
-  display: block;
-  width: 70px;
-  height: 70px;
-  margin: 25px auto 10px auto;
-  border-radius: 50%;
-  border: none;
-  background-color: red;
-  color: white;
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-}
 
-.ai-button:hover {
-  opacity: 0.8;
-}
-.ai-result {
-  margin: 20px 0;
-  padding: 20px;
-  background-color: #fff3f3;
-  border: 2px solid red;
-  border-radius: 10px;
-  font-size: 18px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-}
   </style>
 </head>
 
@@ -271,6 +282,26 @@
 
 
     // ========================================
+    // このiPadを識別するID
+    // ========================================
+
+    let clientId =
+      localStorage.getItem("doutokuClientId");
+
+    if (!clientId) {
+
+      clientId =
+        crypto.randomUUID();
+
+      localStorage.setItem(
+        "doutokuClientId",
+        clientId
+      );
+
+    }
+
+
+    // ========================================
     // 班の画面を作成
     // ========================================
 
@@ -299,6 +330,12 @@
         <div class="student-box">
 
           <div class="student-title">①</div>
+
+          <div
+            id="typing-${group}-1"
+            class="typing-status"
+            style="display:none;"
+          ></div>
 
           <textarea
             id="answer-${group}-1"
@@ -333,6 +370,12 @@
 
           <div class="student-title">②</div>
 
+          <div
+            id="typing-${group}-2"
+            class="typing-status"
+            style="display:none;"
+          ></div>
+
           <textarea
             id="answer-${group}-2"
             placeholder="考えを入力してください"
@@ -365,6 +408,12 @@
         <div class="student-box">
 
           <div class="student-title">③</div>
+
+          <div
+            id="typing-${group}-3"
+            class="typing-status"
+            style="display:none;"
+          ></div>
 
           <textarea
             id="answer-${group}-3"
@@ -399,6 +448,12 @@
 
           <div class="student-title">④</div>
 
+          <div
+            id="typing-${group}-4"
+            class="typing-status"
+            style="display:none;"
+          ></div>
+
           <textarea
             id="answer-${group}-4"
             placeholder="考えを入力してください"
@@ -426,13 +481,21 @@
           ></div>
 
         </div>
+
+
         <button
           class="ai-button"
           data-group="${group}"
         >
           AI
         </button>
-<div id="ai-result-${group}" class="ai-result" style="display:none;"></div>
+
+        <div
+          id="ai-result-${group}"
+          class="ai-result"
+          style="display:none;"
+        ></div>
+
       `;
 
 
@@ -548,178 +611,407 @@
 
     });
 
-// ========================================
-// AIボタン
-// ========================================
 
-const aiButtons = document.querySelectorAll(".ai-button");
+    // ========================================
+    // 入力中表示
+    // ========================================
 
-// GAS WebアプリのURL
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
+    const typingTimers = {};
 
-
-// ========================================
-// AIボタンを押したときの処理
-// ========================================
-
-aiButtons.forEach(button => {
-
-  button.addEventListener("click", async () => {
-
-    const group = button.dataset.group;
-
-    // 二重クリック防止
-    button.disabled = true;
-
-    const originalText = button.textContent;
-
-    button.textContent = "生成中…";
+    const textareas =
+      document.querySelectorAll("textarea");
 
 
-    try {
+    textareas.forEach(textarea => {
 
-      // ----------------------------------------
-      // ① 授業情報をFirestoreから取得
-      // ----------------------------------------
+      textarea.addEventListener("input", async () => {
 
-      const lessonRef =
-        doc(db, "lessons", lessonId);
+        const id =
+          textarea.id;
 
-      const lessonSnapshot =
-        await getDoc(lessonRef);
+        const parts =
+          id.split("-");
 
+        const group =
+          parts[1];
 
-      if (!lessonSnapshot.exists()) {
-        throw new Error("授業情報が見つかりません。");
-      }
-
-
-      const lessonData =
-        lessonSnapshot.data();
+        const student =
+          parts[2];
 
 
-      // ----------------------------------------
-      // ② この班の回答をFirestoreから取得
-      // ----------------------------------------
-
-      const responsesRef =
-        collection(
-          db,
-          "lessons",
-          lessonId,
-          "groups",
-          String(group),
-          "responses"
-        );
+        const answerRef =
+          doc(
+            db,
+            "lessons",
+            lessonId,
+            "groups",
+            String(group),
+            "responses",
+            String(student)
+          );
 
 
-      const snapshot =
-        await getDocs(responsesRef);
+        try {
+
+          // 入力中であることをFirestoreに保存
+          await setDoc(
+            answerRef,
+            {
+              isTyping: true,
+              typingClientId: clientId,
+              typingAt: serverTimestamp()
+            },
+            {
+              merge: true
+            }
+          );
 
 
-      const answers = [];
+          // 以前のタイマーを解除
+          if (typingTimers[id]) {
+            clearTimeout(typingTimers[id]);
+          }
 
 
-      snapshot.forEach(docSnapshot => {
+          // 5秒間入力がなければ入力中を解除
+          typingTimers[id] =
+            setTimeout(async () => {
 
-        const data =
-          docSnapshot.data();
+              try {
+
+                const currentValue =
+                  textarea.value.trim();
 
 
-        if (
-          data.answer &&
-          data.answer.trim() !== ""
-        ) {
+                // すでに回答を保存している場合は、
+                // 入力中だけ解除する
+                await setDoc(
+                  answerRef,
+                  {
+                    isTyping: false
+                  },
+                  {
+                    merge: true
+                  }
+                );
 
-          answers.push(data.answer);
+              } catch (error) {
+
+                console.error(
+                  "入力中状態の解除エラー:",
+                  error
+                );
+
+              }
+
+            }, 5000);
+
+
+        } catch (error) {
+
+          console.error(
+            "入力中状態の保存エラー:",
+            error
+          );
 
         }
 
       });
 
 
-      // ----------------------------------------
-      // ③ GASへ送るデータ
-      // ----------------------------------------
+      // ========================================
+      // 入力欄から離れたとき
+      // ========================================
 
-      const requestData = {
+      textarea.addEventListener("blur", async () => {
 
-        question:
-          lessonData.question || "",
+        const id =
+          textarea.id;
 
-        mainContentItem:
-          lessonData.mainContentItem || "",
+        const parts =
+          id.split("-");
 
-        relatedContentItems:
-          lessonData.relatedContentItems || [],
+        const group =
+          parts[1];
 
-        answers:
-          answers
-
-      };
+        const student =
+          parts[2];
 
 
-      console.log(
-        "GASへ送信するデータ:",
-        requestData
-      );
+        const answerRef =
+          doc(
+            db,
+            "lessons",
+            lessonId,
+            "groups",
+            String(group),
+            "responses",
+            String(student)
+          );
 
 
-      // ----------------------------------------
-      // ④ GASを呼び出す
-      // ----------------------------------------
-
-      const response =
-        await fetch(GAS_URL, {
-
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "text/plain;charset=utf-8"
-          },
-
-          body:
-            JSON.stringify(requestData)
-
-        });
+        if (typingTimers[id]) {
+          clearTimeout(typingTimers[id]);
+        }
 
 
-      if (!response.ok) {
+        try {
 
-        throw new Error(
-          "GASとの通信に失敗しました。HTTP " +
-          response.status
-        );
+          await setDoc(
+            answerRef,
+            {
+              isTyping: false
+            },
+            {
+              merge: true
+            }
+          );
 
-      }
+        } catch (error) {
 
+          console.error(
+            "入力中状態の解除エラー:",
+            error
+          );
 
-      const result =
-        await response.json();
+        }
 
+      });
 
-      console.log(
-        "GASからの結果:",
-        result
-      );
-
-
-      if (!result.success) {
-
-        throw new Error(
-          result.error ||
-          "AIでの発問生成に失敗しました。"
-        );
-
-      }
+    });
 
 
-      // ----------------------------------------
-      // ⑤ AIの発問をFirestoreに保存
-      // ----------------------------------------
+    // ========================================
+    // AIボタン
+    // ========================================
 
-      const aiResultRef =
+    const aiButtons =
+      document.querySelectorAll(".ai-button");
+
+
+    const GAS_URL =
+      "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
+
+
+    aiButtons.forEach(button => {
+
+      button.addEventListener("click", async () => {
+
+        const group =
+          button.dataset.group;
+
+
+        button.disabled = true;
+
+
+        const originalText =
+          button.textContent;
+
+
+        button.textContent =
+          "生成中…";
+
+
+        try {
+
+          // ① 授業情報をFirestoreから取得
+
+          const lessonRef =
+            doc(db, "lessons", lessonId);
+
+
+          const lessonSnapshot =
+            await getDoc(lessonRef);
+
+
+          if (!lessonSnapshot.exists()) {
+
+            throw new Error(
+              "授業情報が見つかりません。"
+            );
+
+          }
+
+
+          const lessonData =
+            lessonSnapshot.data();
+
+
+          // ② この班の回答をFirestoreから取得
+
+          const responsesRef =
+            collection(
+              db,
+              "lessons",
+              lessonId,
+              "groups",
+              String(group),
+              "responses"
+            );
+
+
+          const snapshot =
+            await getDocs(responsesRef);
+
+
+          const answers = [];
+
+
+          snapshot.forEach(docSnapshot => {
+
+            const data =
+              docSnapshot.data();
+
+
+            if (
+              data.answer &&
+              data.answer.trim() !== ""
+            ) {
+
+              answers.push(data.answer);
+
+            }
+
+          });
+
+
+          // ③ GASへ送るデータ
+
+          const requestData = {
+
+            question:
+              lessonData.question || "",
+
+            mainContentItem:
+              lessonData.mainContentItem || "",
+
+            relatedContentItems:
+              lessonData.relatedContentItems || [],
+
+            answers:
+              answers
+
+          };
+
+
+          console.log(
+            "GASへ送信するデータ:",
+            requestData
+          );
+
+
+          // ④ GASを呼び出す
+
+          const response =
+            await fetch(
+              GAS_URL,
+              {
+                method: "POST",
+
+                headers: {
+                  "Content-Type":
+                    "text/plain;charset=utf-8"
+                },
+
+                body:
+                  JSON.stringify(requestData)
+              }
+            );
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              "GASとの通信に失敗しました。HTTP " +
+              response.status
+            );
+
+          }
+
+
+          const result =
+            await response.json();
+
+
+          console.log(
+            "GASからの結果:",
+            result
+          );
+
+
+          if (!result.success) {
+
+            throw new Error(
+              result.error ||
+              "AIでの発問生成に失敗しました。"
+            );
+
+          }
+
+
+          // ⑤ AIの発問をFirestoreに保存
+
+          const aiResultRef =
+            doc(
+              db,
+              "lessons",
+              lessonId,
+              "groups",
+              String(group)
+            );
+
+
+          await setDoc(
+            aiResultRef,
+            {
+              aiResult:
+                result.result,
+
+              aiUpdatedAt:
+                serverTimestamp()
+            },
+            {
+              merge: true
+            }
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            "AI処理エラー:",
+            error
+          );
+
+
+          alert(
+            "AIによる発問生成中にエラーが発生しました。\n\n" +
+            error.message
+          );
+
+
+        } finally {
+
+          button.disabled =
+            false;
+
+          button.textContent =
+            originalText;
+
+        }
+
+      });
+
+    });
+
+
+    // ========================================
+    // AI発問をFirestoreからリアルタイム取得
+    // ========================================
+
+    for (let group = 1; group <= 12; group++) {
+
+      const groupRef =
         doc(
           db,
           "lessons",
@@ -729,227 +1021,228 @@ aiButtons.forEach(button => {
         );
 
 
-      await setDoc(
-        aiResultRef,
-        {
-          aiResult:
-            result.result,
+      onSnapshot(
+        groupRef,
 
-          aiUpdatedAt:
-            serverTimestamp()
+        (snapshot) => {
+
+          if (!snapshot.exists()) {
+            return;
+          }
+
+
+          const data =
+            snapshot.data();
+
+
+          const aiResultArea =
+            document.getElementById(
+              `ai-result-${group}`
+            );
+
+
+          if (!aiResultArea) {
+            return;
+          }
+
+
+          if (data.aiResult) {
+
+            aiResultArea.textContent =
+              "🤖 AIからの発問\n\n" +
+              data.aiResult;
+
+
+            aiResultArea.style.display =
+              "block";
+
+          }
+
         },
-        {
-          merge: true
+
+        (error) => {
+
+          console.error(
+            "AI発問のリアルタイム取得エラー:",
+            error
+          );
+
         }
-      );
 
-
-    } catch (error) {
-
-      console.error(
-        "AI処理エラー:",
-        error
-      );
-
-
-      alert(
-        "AIによる発問生成中にエラーが発生しました。\n\n" +
-        error.message
-      );
-
-
-    } finally {
-
-      button.disabled = false;
-
-      button.textContent =
-        originalText;
-
-    }
-
-  });
-
-});
-
-
-// ========================================
-// AI発問をFirestoreからリアルタイム取得
-// ========================================
-
-for (let group = 1; group <= 12; group++) {
-
-  const groupRef =
-    doc(
-      db,
-      "lessons",
-      lessonId,
-      "groups",
-      String(group)
-    );
-
-
-  onSnapshot(
-    groupRef,
-
-    (snapshot) => {
-
-      if (!snapshot.exists()) {
-        return;
-      }
-
-
-      const data =
-        snapshot.data();
-
-
-      const aiResultArea =
-        document.getElementById(
-          `ai-result-${group}`
-        );
-
-
-      if (!aiResultArea) {
-        return;
-      }
-
-
-      if (data.aiResult) {
-
-        aiResultArea.textContent =
-          "🤖 AIからの発問\n\n" +
-          data.aiResult;
-
-
-        aiResultArea.style.display =
-          "block";
-
-      }
-
-    },
-
-    (error) => {
-
-      console.error(
-        "AI発問のリアルタイム取得エラー:",
-        error
       );
 
     }
 
-  );
 
-}
     // ========================================
     // 回答をFirestoreに保存
     // ========================================
 
-    const submitButtons = document.querySelectorAll(".submit-button");
+    const submitButtons =
+      document.querySelectorAll(".submit-button");
 
-submitButtons.forEach(button => {
 
-  button.addEventListener("click", async () => {
+    submitButtons.forEach(button => {
 
-    const group = button.dataset.group;
-    const student = button.dataset.student;
+      button.addEventListener(
+        "click",
+        async () => {
 
-    const textarea =
-      document.getElementById(`answer-${group}-${student}`);
+          const group =
+            button.dataset.group;
 
-    const answer = textarea.value.trim();
+          const student =
+            button.dataset.student;
 
-    const status =
-      document.getElementById(`status-${group}-${student}`);
 
-    if (!answer) {
-      status.textContent = "回答を入力してください。";
-      return;
-    }
-
-    try {
-
-      status.textContent = "保存中……";
-
-      const answerRef =
-        doc(
-          db,
-          "lessons",
-          lessonId,
-          "groups",
-          String(group),
-          "responses",
-          String(student)
-        );
-
-      // すでに別の生徒が使っていないか確認し、
-      // 空いていればこの回答欄を確保する
-      await runTransaction(db, async (transaction) => {
-
-        const answerSnapshot =
-          await transaction.get(answerRef);
-
-        if (answerSnapshot.exists()) {
-
-          const existingData =
-            answerSnapshot.data();
-
-          if (
-            existingData.answer &&
-            existingData.answer.trim() !== ""
-          ) {
-            throw new Error(
-              "この回答欄はすでに使用されています。"
+          const textarea =
+            document.getElementById(
+              `answer-${group}-${student}`
             );
+
+
+          const answer =
+            textarea.value.trim();
+
+
+          const status =
+            document.getElementById(
+              `status-${group}-${student}`
+            );
+
+
+          if (!answer) {
+
+            status.textContent =
+              "回答を入力してください。";
+
+            return;
+
           }
+
+
+          try {
+
+            status.textContent =
+              "保存中……";
+
+
+            const answerRef =
+              doc(
+                db,
+                "lessons",
+                lessonId,
+                "groups",
+                String(group),
+                "responses",
+                String(student)
+              );
+
+
+            // すでに別の生徒が使っていないか確認
+            await runTransaction(
+              db,
+              async (transaction) => {
+
+                const answerSnapshot =
+                  await transaction.get(
+                    answerRef
+                  );
+
+
+                if (answerSnapshot.exists()) {
+
+                  const existingData =
+                    answerSnapshot.data();
+
+
+                  if (
+                    existingData.answer &&
+                    existingData.answer.trim() !== ""
+                  ) {
+
+                    throw new Error(
+                      "この回答欄はすでに使用されています。"
+                    );
+
+                  }
+
+                }
+
+
+                transaction.set(
+                  answerRef,
+                  {
+                    answer:
+                      answer,
+
+                    updatedAt:
+                      serverTimestamp(),
+
+                    isTyping:
+                      false,
+
+                    typingClientId:
+                      null,
+
+                    typingAt:
+                      null
+                  },
+                  {
+                    merge: true
+                  }
+                );
+
+              }
+            );
+
+
+            status.textContent =
+              "回答を保存しました。";
+
+
+            // 保存後は入力欄を編集できないようにする
+
+            textarea.disabled =
+              true;
+
+            button.disabled =
+              true;
+
+
+          } catch (error) {
+
+            console.error(error);
+
+
+            if (
+              error.message ===
+              "この回答欄はすでに使用されています。"
+            ) {
+
+              status.textContent =
+                "この回答欄はすでに別の人が使用しています。別の欄を使ってください。";
+
+              textarea.value = "";
+
+            } else {
+
+              status.textContent =
+                "保存中にエラーが発生しました。";
+
+            }
+
+          }
+
         }
+      );
 
-        transaction.set(
-          answerRef,
-          {
-            answer: answer,
-            updatedAt: serverTimestamp()
-          },
-          {
-            merge: true
-          }
-        );
+    });
 
-      });
 
-      status.textContent =
-        "回答を保存しました。";
-
-      // 保存後は入力欄を編集できないようにする
-      textarea.disabled = true;
-      button.disabled = true;
-
-    } catch (error) {
-
-      console.error(error);
-
-      if (
-        error.message ===
-        "この回答欄はすでに使用されています。"
-      ) {
-
-        status.textContent =
-          "この回答欄はすでに別の人が使用しています。別の欄を使ってください。";
-
-        textarea.value = "";
-
-      } else {
-
-        status.textContent =
-          "保存中にエラーが発生しました。";
-
-      }
-
-    }
-
-  });
-
-});
     // ========================================
-    // Firestoreの回答をリアルタイム表示
+    // Firestoreの回答・入力中状態を
+    // リアルタイム表示
     // ========================================
 
     for (let group = 1; group <= 12; group++) {
@@ -967,52 +1260,104 @@ submitButtons.forEach(button => {
 
       onSnapshot(
         responsesRef,
+
         (snapshot) => {
 
-          snapshot.forEach((docSnapshot) => {
+          snapshot.forEach(
+            (docSnapshot) => {
 
-            const student =
-              docSnapshot.id;
-
-            const data =
-              docSnapshot.data();
+              const student =
+                docSnapshot.id;
 
 
-            const answerArea =
-              document.getElementById(
-                `submitted-${group}-${student}`
-              );
+              const data =
+                docSnapshot.data();
 
 
-            const textarea =
-              document.getElementById(
-                `answer-${group}-${student}`
-              );
+              // ------------------------------
+              // 回答表示
+              // ------------------------------
+
+              const answerArea =
+                document.getElementById(
+                  `submitted-${group}-${student}`
+                );
 
 
-            if (!answerArea) {
-              return;
+              const textarea =
+                document.getElementById(
+                  `answer-${group}-${student}`
+                );
+
+
+              if (!answerArea) {
+                return;
+              }
+
+
+              if (data.answer) {
+
+                answerArea.textContent =
+                  data.answer;
+
+                answerArea.style.display =
+                  "block";
+
+
+                // 保存された回答を
+                // 入力欄にも表示
+
+                if (
+                  document.activeElement !== textarea
+                ) {
+
+                  textarea.value =
+                    data.answer;
+
+                }
+
+              }
+
+
+              // ------------------------------
+              // 入力中表示
+              // ------------------------------
+
+              const typingArea =
+                document.getElementById(
+                  `typing-${group}-${student}`
+                );
+
+
+              if (!typingArea) {
+                return;
+              }
+
+
+              if (
+                data.isTyping === true &&
+                data.typingClientId &&
+                data.typingClientId !== clientId
+              ) {
+
+                typingArea.textContent =
+                  `🔵 ${student}番は入力中です`;
+
+                typingArea.style.display =
+                  "block";
+
+              } else {
+
+                typingArea.style.display =
+                  "none";
+
+              }
+
             }
-
-
-            if (data.answer) {
-
-              answerArea.textContent =
-                data.answer;
-
-              answerArea.style.display =
-                "block";
-
-
-              // 保存された回答を入力欄にも表示
-              textarea.value =
-                data.answer;
-
-            }
-
-          });
+          );
 
         },
+
         (error) => {
 
           console.error(
@@ -1021,6 +1366,7 @@ submitButtons.forEach(button => {
           );
 
         }
+
       );
 
     }
