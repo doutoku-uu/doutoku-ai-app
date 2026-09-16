@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>授業を作成する</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-size: 16px;
+      padding: 10px;
+      box-sizing: border-box;
+      margin-top: 5px;
+      resize: vertical;
+    }
+
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px 12px;
+    }
+
+    .category-title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      background-color: #f0f0f0;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      font-weight: normal;
+      font-size: 14px;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .checkbox-item input {
+      flex-shrink: 0;
+      margin: 3px 6px 0 0;
+      transform: scale(1.1);
+      cursor: pointer;
+    }
+
+    .related-disabled {
+      color: #999;
+      background-color: #f5f5f5;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .related-disabled input {
+      cursor: not-allowed;
+    }
+
+    button {
+      display: block;
+      margin: 30px auto;
+      padding: 12px 35px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    #result {
+      display: none;
+      text-align: center;
+      margin-top: 30px;
+      padding: 20px;
+      border: 2px solid #333;
+    }
+
+    #lessonId {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      margin: 15px;
+    }
+
+    .selected-items {
+      margin-top: 10px;
+      text-align: left;
+    }
+
+    #saveStatus {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 700px) {
+      .items-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 450px) {
+      .items-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+
+<body>
+
+  <h1>授業を作成する</h1>
+
+
+  <!-- ====================================== -->
+  <!-- ① 発問 -->
+  <!-- ====================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      ① 発問
+    </div>
+
+    <textarea
+      id="question"
+      placeholder="授業で考えさせたい発問を入力してください"></textarea>
+
+  </div>
+
+
+  <!-- ====================================== -->
+  <!-- ② 主にねらう内容項目 -->
+  <!-- ====================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      ② 主にねらう内容項目
+    </div>
+
+    <div class="note">
+      ※ 主にねらう内容項目は1つ選択してください。
+    </div>
+
+
+    <!-- A -->
+
+    <div class="category-title">
+      A　主として自分自身に関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="自主、自律、自由と責任">
+        自主、自律、自由と責任
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="節度、節制">
+        節度、節制
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="向上心、個性の伸長">
+        向上心、個性の伸長
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="希望と勇気、克己と強い意志">
+        希望と勇気、克己と強い意志
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="真理の探究、創造">
+        真理の探究、創造
+      </label>
+
+    </div>
+
+
+    <!-- B -->
+
+    <div class="category-title">
+      B　主として人との関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="思いやり、感謝">
+        思いやり、感謝
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="礼儀">
+        礼儀
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="友情、信頼">
+        友情、信頼
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="相互理解、寛容">
+        相互理解、寛容
+      </label>
+
+    </div>
+
+
+    <!-- C -->
+
+    <div class="category-title">
+      C　主として集団や社会との関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="遵法精神、公徳心">
+        遵法精神、公徳心
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="公正、公平、社会正義">
+        公正、公平、社会正義
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="社会参画、公共の精神">
+        社会参画、公共の精神
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="勤労">
+        勤労
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="家族愛、家庭生活の充実">
+        家族愛、家庭生活の充実
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="よりよい学校生活、集団生活の充実">
+        よりよい学校生活、集団生活の充実
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="郷土の伝統と文化の尊重、郷土を愛する態度">
+        郷土の伝統と文化の尊重、郷土を愛する態度
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="我が国の伝統と文化の尊重、国を愛する態度">
+        我が国の伝統と文化の尊重、国を愛する態度
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="国際理解、国際貢献">
+        国際理解、国際貢献
+      </label>
+
+    </div>
+
+
+    <!-- D -->
+
+    <div class="category-title">
+      D　主として生命や自然、崇高なものとの関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="生命の尊さ">
+        生命の尊さ
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="自然愛護">
+        自然愛護
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="感動、畏敬の念">
+        感動、畏敬の念
+      </label>
+
+      <label class="checkbox-item">
+        <input type="radio" name="mainContentItem" value="よりよく生きる喜び">
+        よりよく生きる喜び
+      </label>
+
+    </div>
+
+  </div>
+
+
+  <!-- ====================================== -->
+  <!-- ③ 関連する内容項目 -->
+  <!-- ====================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      ③ 関連する内容項目
+    </div>
+
+    <div class="note">
+      ※ 関連する内容項目は複数選択できます。
+    </div>
+
+
+    <!-- A -->
+
+    <div class="category-title">
+      A　主として自分自身に関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="自主、自律、自由と責任">
+        自主、自律、自由と責任
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="節度、節制">
+        節度、節制
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="向上心、個性の伸長">
+        向上心、個性の伸長
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="希望と勇気、克己と強い意志">
+        希望と勇気、克己と強い意志
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="真理の探究、創造">
+        真理の探究、創造
+      </label>
+
+    </div>
+
+
+    <!-- B -->
+
+    <div class="category-title">
+      B　主として人との関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="思いやり、感謝">
+        思いやり、感謝
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="礼儀">
+        礼儀
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="友情、信頼">
+        友情、信頼
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="相互理解、寛容">
+        相互理解、寛容
+      </label>
+
+    </div>
+
+
+    <!-- C -->
+
+    <div class="category-title">
+      C　主として集団や社会との関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="遵法精神、公徳心">
+        遵法精神、公徳心
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="公正、公平、社会正義">
+        公正、公平、社会正義
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="社会参画、公共の精神">
+        社会参画、公共の精神
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="勤労">
+        勤労
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="家族愛、家庭生活の充実">
+        家族愛、家庭生活の充実
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="よりよい学校生活、集団生活の充実">
+        よりよい学校生活、集団生活の充実
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="郷土の伝統と文化の尊重、郷土を愛する態度">
+        郷土の伝統と文化の尊重、郷土を愛する態度
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="我が国の伝統と文化の尊重、国を愛する態度">
+        我が国の伝統と文化の尊重、国を愛する態度
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="国際理解、国際貢献">
+        国際理解、国際貢献
+      </label>
+
+    </div>
+
+
+    <!-- D -->
+
+    <div class="category-title">
+      D　主として生命や自然、崇高なものとの関わりに関すること
+    </div>
+
+    <div class="items-grid">
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="生命の尊さ">
+        生命の尊さ
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="自然愛護">
+        自然愛護
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="感動、畏敬の念">
+        感動、畏敬の念
+      </label>
+
+      <label class="checkbox-item">
+        <input type="checkbox" name="relatedContentItem" value="よりよく生きる喜び">
+        よりよく生きる喜び
+      </label>
+
+    </div>
+
+  </div>
+
+
+  <!-- ====================================== -->
+  <!-- 授業作成ボタン -->
+  <!-- ====================================== -->
+
+  <button id="createButton">
+    授業を作成する
+  </button>
+
+
+  <!-- ====================================== -->
+  <!-- 授業作成後の表示 -->
+  <!-- ====================================== -->
+
+  <div id="result">
+
+    <div>授業を作成しました！</div>
+
+    <div>授業ID</div>
+
+    <div id="lessonId"></div>
+
+    <div>このIDを生徒に伝えてください。</div>
+
+    <div class="selected-items">
+      <strong>主にねらう内容項目：</strong>
+      <span id="mainItemResult"></span>
+    </div>
+
+    <div class="selected-items">
+      <strong>関連する内容項目：</strong>
+      <span id="relatedItemResult"></span>
+    </div>
+
+    <div id="saveStatus">
+      Firebaseに保存しました。
+    </div>
+
+  </div>
+
+
+  <!-- ====================================== -->
+  <!-- Firebase -->
+  <!-- ====================================== -->
+
+  <script type="module">
+
+    /*
+     * Firebase本体
+     */
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+
+    /*
+     * Firestore
+     */
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      serverTimestamp
+    }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
+    /*
+     * あなたのFirebaseプロジェクトの設定
+     */
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyARE4v_aZn606QafIKt3BoGCg82Fk04lKo",
+
+      authDomain: "doutokuaiapp.firebaseapp.com",
+
+      projectId: "doutokuaiapp",
+
+      storageBucket: "doutokuaiapp.firebasestorage.app",
+
+      messagingSenderId: "192277542082",
+
+      appId: "1:192277542082:web:d21654cf75692e0b28375b"
+
+    };
+
+
+    /*
+     * Firebaseを起動
+     */
+    const app = initializeApp(firebaseConfig);
+
+
+    /*
+     * Firestoreを使用
+     */
+    const db = getFirestore(app);
+
+
+    /*
+     * 主な内容項目が変更されたとき、
+     * 同じ項目を関連項目では選べないようにする
+     */
+    document
+      .querySelectorAll('input[name="mainContentItem"]')
+      .forEach(function(mainRadio) {
+
+        mainRadio.addEventListener("change", function() {
+
+          const selectedMainItem = this.value;
+
+
+          document
+            .querySelectorAll(
+              'input[name="relatedContentItem"]'
+            )
+            .forEach(function(relatedCheckbox) {
+
+              const label =
+                relatedCheckbox.closest("label");
+
+
+              if (
+                relatedCheckbox.value ===
+                selectedMainItem
+              ) {
+
+                relatedCheckbox.checked = false;
+
+                relatedCheckbox.disabled = true;
+
+                label.classList.add(
+                  "related-disabled"
+                );
+
+              } else {
+
+                relatedCheckbox.disabled = false;
+
+                label.classList.remove(
+                  "related-disabled"
+                );
+
+              }
+
+            });
+
+        });
+
+      });
+
+
+    /*
+     * 授業IDを作る
+     */
+    function generateLessonId() {
+
+      const characters =
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+      let lessonId = "";
+
+
+      for (let i = 0; i < 6; i++) {
+
+        lessonId +=
+          characters.charAt(
+            Math.floor(
+              Math.random() *
+              characters.length
+            )
+          );
+
+      }
+
+
+      return lessonId;
+
+    }
+
+
+    /*
+     * 授業を作成する
+     */
+    async function createLesson() {
+
+      const button =
+        document.getElementById("createButton");
+
+
+      /*
+       * 発問
+       */
+      const question =
+        document
+          .getElementById("question")
+          .value
+          .trim();
+
+
+      /*
+       * 主な内容項目
+       */
+      const mainItem =
+        document.querySelector(
+          'input[name="mainContentItem"]:checked'
+        );
+
+
+      /*
+       * 関連する内容項目
+       */
+      const relatedItems =
+        document.querySelectorAll(
+          'input[name="relatedContentItem"]:checked'
+        );
+
+
+      /*
+       * 発問の確認
+       */
+      if (question === "") {
+
+        alert(
+          "発問を入力してください。"
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * 主な内容項目の確認
+       */
+      if (!mainItem) {
+
+        alert(
+          "主にねらう内容項目を1つ選択してください。"
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * 関連項目を配列にする
+       */
+      const relatedItemList =
+        Array.from(relatedItems).map(
+          function(item) {
+
+            return item.value;
+
+          }
+        );
+
+
+      /*
+       * ボタンを一時的に押せなくする
+       */
+      button.disabled = true;
+
+      button.textContent =
+        "授業を作成しています…";
+
+
+      try {
+
+        let lessonId;
+
+        let lessonRef;
+
+        let existingLesson;
+
+
+        /*
+         * 他の授業とIDが重ならないようにする
+         */
+        do {
+
+          lessonId =
+            generateLessonId();
+
+          lessonRef =
+            doc(
+              db,
+              "lessons",
+              lessonId
+            );
+
+          existingLesson =
+            await getDoc(lessonRef);
+
+        } while (existingLesson.exists());
+
+
+        /*
+         * Firestoreに授業データを保存
+         */
+        await setDoc(
+          lessonRef,
+          {
+
+            question: question,
+
+            mainContentItem:
+              mainItem.value,
+
+            relatedContentItems:
+              relatedItemList,
+
+            createdAt:
+              serverTimestamp(),
+
+            status:
+              "created"
+
+          }
+        );
+
+
+        /*
+         * 画面に結果を表示
+         */
+        document
+          .getElementById("lessonId")
+          .textContent =
+            lessonId;
+
+
+        document
+          .getElementById("mainItemResult")
+          .textContent =
+            mainItem.value;
+
+
+        document
+          .getElementById("relatedItemResult")
+          .textContent =
+            relatedItemList.length > 0
+              ? relatedItemList.join("、 ")
+              : "なし";
+
+
+        document
+          .getElementById("saveStatus")
+          .textContent =
+            "Firebaseに保存しました。";
+
+
+        document
+          .getElementById("result")
+          .style.display =
+            "block";
+
+
+        /*
+         * 確認用
+         */
+        console.log(
+          "授業ID:",
+          lessonId
+        );
+
+        console.log(
+          "発問:",
+          question
+        );
+
+        console.log(
+          "主にねらう内容項目:",
+          mainItem.value
+        );
+
+        console.log(
+          "関連する内容項目:",
+          relatedItemList
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "授業作成エラー:",
+          error
+        );
+
+
+        alert(
+          "授業の保存に失敗しました。\n\n" +
+          "エラー内容:\n" +
+          error.message
+        );
+
+
+      } finally {
+
+        button.disabled = false;
+
+        button.textContent =
+          "授業を作成する";
+
+      }
+
+    }
+
+
+    /*
+     * ボタンが押されたらcreateLessonを実行
+     */
+    document
+      .getElementById("createButton")
+      .addEventListener(
+        "click",
+        createLesson
+      );
+
+  </script>
+
+</body>
+</html>

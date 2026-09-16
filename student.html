@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>道徳授業 - 生徒画面</title>
+
+  <style>
+
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .box {
+      background-color: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .question {
+      font-size: 22px;
+      line-height: 1.8;
+      margin-top: 15px;
+    }
+
+
+    /* 班のタブ */
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 12px 5px;
+      border: 1px solid #aaa;
+      background-color: #eee;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    .tab:hover {
+      background-color: #ddd;
+    }
+
+    .tab.active {
+      background-color: #333;
+      color: white;
+    }
+
+
+    /* 班の内容 */
+
+    .group-content {
+      display: none;
+    }
+
+    .group-content.active {
+      display: block;
+    }
+
+
+    /* 回答フォーム */
+
+    .student-box {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+
+    .student-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 10px;
+      box-sizing: border-box;
+      font-size: 16px;
+      resize: vertical;
+    }
+
+    .submit-button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .submit-button:hover {
+      opacity: 0.8;
+    }
+
+    .submitted-answer {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f0f0f0;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .status {
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+
+      .tabs {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .question {
+        font-size: 19px;
+      }
+
+    }
+.ai-button {
+  display: block;
+  width: 70px;
+  height: 70px;
+  margin: 25px auto 10px auto;
+  border-radius: 50%;
+  border: none;
+  background-color: red;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ai-button:hover {
+  opacity: 0.8;
+}
+  </style>
+</head>
+
+
+<body>
+
+  <h1>道徳授業</h1>
+
+
+  <!-- 発問 -->
+
+  <div class="box">
+
+    <h2>発問</h2>
+
+    <div
+      id="question"
+      class="question"
+    >
+      読み込み中……
+    </div>
+
+  </div>
+
+
+  <!-- 班のタブ -->
+
+  <div class="box">
+
+    <h2>グループ</h2>
+
+    <div class="tabs">
+
+      <button class="tab active" data-group="1">1班</button>
+      <button class="tab" data-group="2">2班</button>
+      <button class="tab" data-group="3">3班</button>
+      <button class="tab" data-group="4">4班</button>
+      <button class="tab" data-group="5">5班</button>
+      <button class="tab" data-group="6">6班</button>
+      <button class="tab" data-group="7">7班</button>
+      <button class="tab" data-group="8">8班</button>
+      <button class="tab" data-group="9">9班</button>
+      <button class="tab" data-group="10">10班</button>
+      <button class="tab" data-group="11">11班</button>
+      <button class="tab" data-group="12">12班</button>
+
+    </div>
+
+
+    <!-- 班の内容をここに自動生成 -->
+
+    <div id="groupsContainer"></div>
+
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      collection,
+      getDocs,
+      onSnapshot,
+      serverTimestamp,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
+    // ========================================
+    // Firebase設定
+    // ========================================
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyARE4v_aZn606QafIKt3BoGCg82Fk04lKo",
+      authDomain: "doutokuaiapp.firebaseapp.com",
+      projectId: "doutokuaiapp",
+      storageBucket: "doutokuaiapp.firebasestorage.app",
+      messagingSenderId: "192277542082",
+      appId: "1:192277542082:web:d21654cf75692e0b28375b"
+    };
+
+
+    const app =
+      initializeApp(firebaseConfig);
+
+    const db =
+      getFirestore(app);
+
+
+    // ========================================
+    // URLから授業IDを取得
+    // ========================================
+
+    const params =
+      new URLSearchParams(window.location.search);
+
+    const lessonId =
+      params.get("lessonId");
+
+
+    // ========================================
+    // 班の画面を作成
+    // ========================================
+
+    const groupsContainer =
+      document.getElementById("groupsContainer");
+
+
+    for (let group = 1; group <= 12; group++) {
+
+      const groupElement =
+        document.createElement("div");
+
+      groupElement.className = "group-content";
+
+      if (group === 1) {
+        groupElement.classList.add("active");
+      }
+
+      groupElement.dataset.groupContent = group;
+
+
+      groupElement.innerHTML = `
+
+        <h2>${group}班</h2>
+
+        <div class="student-box">
+
+          <div class="student-title">①</div>
+
+          <textarea
+            id="answer-${group}-1"
+            placeholder="考えを入力してください"
+          ></textarea>
+
+          <br>
+
+          <button
+            class="submit-button"
+            data-group="${group}"
+            data-student="1"
+          >
+            回答する
+          </button>
+
+          <div
+            id="status-${group}-1"
+            class="status"
+          ></div>
+
+          <div
+            id="submitted-${group}-1"
+            class="submitted-answer"
+            style="display:none;"
+          ></div>
+
+        </div>
+
+
+        <div class="student-box">
+
+          <div class="student-title">②</div>
+
+          <textarea
+            id="answer-${group}-2"
+            placeholder="考えを入力してください"
+          ></textarea>
+
+          <br>
+
+          <button
+            class="submit-button"
+            data-group="${group}"
+            data-student="2"
+          >
+            回答する
+          </button>
+
+          <div
+            id="status-${group}-2"
+            class="status"
+          ></div>
+
+          <div
+            id="submitted-${group}-2"
+            class="submitted-answer"
+            style="display:none;"
+          ></div>
+
+        </div>
+
+
+        <div class="student-box">
+
+          <div class="student-title">③</div>
+
+          <textarea
+            id="answer-${group}-3"
+            placeholder="考えを入力してください"
+          ></textarea>
+
+          <br>
+
+          <button
+            class="submit-button"
+            data-group="${group}"
+            data-student="3"
+          >
+            回答する
+          </button>
+
+          <div
+            id="status-${group}-3"
+            class="status"
+          ></div>
+
+          <div
+            id="submitted-${group}-3"
+            class="submitted-answer"
+            style="display:none;"
+          ></div>
+
+        </div>
+
+
+        <div class="student-box">
+
+          <div class="student-title">④</div>
+
+          <textarea
+            id="answer-${group}-4"
+            placeholder="考えを入力してください"
+          ></textarea>
+
+          <br>
+
+          <button
+            class="submit-button"
+            data-group="${group}"
+            data-student="4"
+          >
+            回答する
+          </button>
+
+          <div
+            id="status-${group}-4"
+            class="status"
+          ></div>
+
+          <div
+            id="submitted-${group}-4"
+            class="submitted-answer"
+            style="display:none;"
+          ></div>
+
+        </div>
+        <button
+          class="ai-button"
+          data-group="${group}"
+        >
+          AI
+        </button>
+
+      `;
+
+
+      groupsContainer.appendChild(groupElement);
+
+    }
+
+
+    // ========================================
+    // 授業情報を取得
+    // ========================================
+
+    async function loadLesson() {
+
+      if (!lessonId) {
+
+        document.getElementById("question").textContent =
+          "授業IDが指定されていません。";
+
+        return;
+      }
+
+
+      try {
+
+        const lessonRef =
+          doc(db, "lessons", lessonId);
+
+        const lessonSnap =
+          await getDoc(lessonRef);
+
+
+        if (!lessonSnap.exists()) {
+
+          document.getElementById("question").textContent =
+            "授業が見つかりませんでした。";
+
+          return;
+        }
+
+
+        const lessonData =
+          lessonSnap.data();
+
+
+        document.getElementById("question").textContent =
+          lessonData.question || "";
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("question").textContent =
+          "授業情報の取得中にエラーが発生しました。";
+
+      }
+
+    }
+
+
+    loadLesson();
+
+
+    // ========================================
+    // 班のタブを切り替える
+    // ========================================
+
+    const tabs =
+      document.querySelectorAll(".tab");
+
+    const groupContents =
+      document.querySelectorAll(".group-content");
+
+
+    tabs.forEach(tab => {
+
+      tab.addEventListener("click", () => {
+
+        const group =
+          tab.dataset.group;
+
+
+        tabs.forEach(otherTab => {
+
+          otherTab.classList.remove("active");
+
+        });
+
+        tab.classList.add("active");
+
+
+        groupContents.forEach(content => {
+
+          content.classList.remove("active");
+
+        });
+
+
+        const selectedContent =
+          document.querySelector(
+            `[data-group-content="${group}"]`
+          );
+
+
+        if (selectedContent) {
+
+          selectedContent.classList.add("active");
+
+        }
+
+      });
+
+    });
+
+// ========================================
+// AIボタン
+// ========================================
+
+const aiButtons = document.querySelectorAll(".ai-button");
+
+// GAS WebアプリのURL
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyT6OiEgEPmSooooI9FD3a5ty5HQx4A1VRfTkQfNY-c7uuht1wNcXk2197o4ggLTuMs/exec";
+
+aiButtons.forEach(button => {
+  button.addEventListener("click", async () => {
+    const group = button.dataset.group;
+
+    // 二重クリック防止
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = "生成中…";
+
+    try {
+      // ----------------------------------------
+      // ① 授業情報をFirestoreから取得
+      // ----------------------------------------
+      const lessonRef = doc(db, "lessons", lessonId);
+      const lessonSnapshot = await getDoc(lessonRef);
+
+      if (!lessonSnapshot.exists()) {
+        throw new Error("授業情報が見つかりません。");
+      }
+
+      const lessonData = lessonSnapshot.data();
+
+      // ----------------------------------------
+      // ② この班の回答をFirestoreから取得
+      // ----------------------------------------
+      const responsesRef = collection(
+        db,
+        "lessons",
+        lessonId,
+        "groups",
+        String(group),
+        "responses"
+      );
+
+      const snapshot = await getDocs(responsesRef);
+
+      const answers = [];
+
+      snapshot.forEach(docSnapshot => {
+        const data = docSnapshot.data();
+
+        if (data.answer && data.answer.trim() !== "") {
+          answers.push(data.answer);
+        }
+      });
+
+      // ----------------------------------------
+      // ③ GASへ送るデータ
+      // ----------------------------------------
+      const requestData = {
+        question: lessonData.question || "",
+        mainContentItem: lessonData.mainContentItem || "",
+        relatedContentItems:
+          lessonData.relatedContentItems || [],
+        answers: answers
+      };
+
+      console.log("GASへ送信するデータ:", requestData);
+
+      // ----------------------------------------
+      // ④ GASを呼び出す
+      // ----------------------------------------
+      const response = await fetch(GAS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          "GASとの通信に失敗しました。HTTP " +
+          response.status
+        );
+      }
+
+      const result = await response.json();
+
+      console.log("GASからの結果:", result);
+
+      if (!result.success) {
+        throw new Error(
+          result.error || "AIでの発問生成に失敗しました。"
+        );
+      }
+
+      // ----------------------------------------
+      // ⑤ AIの発問を表示
+      // ----------------------------------------
+      alert(
+        `${group}班のAIによる発問\n\n` +
+        result.result
+      );
+
+    } catch (error) {
+
+      console.error("AI処理エラー:", error);
+
+      alert(
+        "AIによる発問生成中にエラーが発生しました。\n\n" +
+        error.message
+      );
+
+    } finally {
+
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  });
+});
+    // ========================================
+    // 回答をFirestoreに保存
+    // ========================================
+
+    const submitButtons = document.querySelectorAll(".submit-button");
+
+submitButtons.forEach(button => {
+
+  button.addEventListener("click", async () => {
+
+    const group = button.dataset.group;
+    const student = button.dataset.student;
+
+    const textarea =
+      document.getElementById(`answer-${group}-${student}`);
+
+    const answer = textarea.value.trim();
+
+    const status =
+      document.getElementById(`status-${group}-${student}`);
+
+    if (!answer) {
+      status.textContent = "回答を入力してください。";
+      return;
+    }
+
+    try {
+
+      status.textContent = "保存中……";
+
+      const answerRef =
+        doc(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group),
+          "responses",
+          String(student)
+        );
+
+      // すでに別の生徒が使っていないか確認し、
+      // 空いていればこの回答欄を確保する
+      await runTransaction(db, async (transaction) => {
+
+        const answerSnapshot =
+          await transaction.get(answerRef);
+
+        if (answerSnapshot.exists()) {
+
+          const existingData =
+            answerSnapshot.data();
+
+          if (
+            existingData.answer &&
+            existingData.answer.trim() !== ""
+          ) {
+            throw new Error(
+              "この回答欄はすでに使用されています。"
+            );
+          }
+        }
+
+        transaction.set(
+          answerRef,
+          {
+            answer: answer,
+            updatedAt: serverTimestamp()
+          },
+          {
+            merge: true
+          }
+        );
+
+      });
+
+      status.textContent =
+        "回答を保存しました。";
+
+      // 保存後は入力欄を編集できないようにする
+      textarea.disabled = true;
+      button.disabled = true;
+
+    } catch (error) {
+
+      console.error(error);
+
+      if (
+        error.message ===
+        "この回答欄はすでに使用されています。"
+      ) {
+
+        status.textContent =
+          "この回答欄はすでに別の人が使用しています。別の欄を使ってください。";
+
+        textarea.value = "";
+
+      } else {
+
+        status.textContent =
+          "保存中にエラーが発生しました。";
+
+      }
+
+    }
+
+  });
+
+});
+    // ========================================
+    // Firestoreの回答をリアルタイム表示
+    // ========================================
+
+    for (let group = 1; group <= 12; group++) {
+
+      const responsesRef =
+        collection(
+          db,
+          "lessons",
+          lessonId,
+          "groups",
+          String(group),
+          "responses"
+        );
+
+
+      onSnapshot(
+        responsesRef,
+        (snapshot) => {
+
+          snapshot.forEach((docSnapshot) => {
+
+            const student =
+              docSnapshot.id;
+
+            const data =
+              docSnapshot.data();
+
+
+            const answerArea =
+              document.getElementById(
+                `submitted-${group}-${student}`
+              );
+
+
+            const textarea =
+              document.getElementById(
+                `answer-${group}-${student}`
+              );
+
+
+            if (!answerArea) {
+              return;
+            }
+
+
+            if (data.answer) {
+
+              answerArea.textContent =
+                data.answer;
+
+              answerArea.style.display =
+                "block";
+
+
+              // 保存された回答を入力欄にも表示
+              textarea.value =
+                data.answer;
+
+            }
+
+          });
+
+        },
+        (error) => {
+
+          console.error(
+            "リアルタイム取得エラー:",
+            error
+          );
+
+        }
+      );
+
+    }
+
+  </script>
+
+</body>
+</html>

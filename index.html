@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>道徳授業アプリ</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+    }
+
+    .box {
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 80%;
+      padding: 12px;
+      font-size: 18px;
+      box-sizing: border-box;
+      margin-bottom: 15px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #333;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.8;
+    }
+
+    .teacher-button {
+      background-color: #555;
+    }
+
+    #result {
+      display: none;
+      text-align: left;
+    }
+
+    .error {
+      color: red;
+      margin-top: 15px;
+    }
+
+    .question {
+      font-size: 20px;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>道徳授業アプリ</h1>
+
+
+  <!-- 生徒：授業に入る -->
+  <div class="box">
+
+    <h2>授業に入る</h2>
+
+    <input
+      type="text"
+      id="lessonId"
+      placeholder="授業IDを入力"
+      maxlength="6"
+    >
+
+    <br>
+
+    <button id="enterButton">
+      入室する
+    </button>
+
+    <div id="errorMessage" class="error"></div>
+
+  </div>
+
+
+  <!-- 教師：授業を作成する -->
+  <div class="box">
+
+    <h2>教師の方はこちら</h2>
+
+    <button
+      class="teacher-button"
+      id="teacherButton"
+    >
+      授業を作成する
+    </button>
+
+  </div>
+
+
+  <!-- 生徒が入室した後に表示 -->
+  <div class="box" id="result">
+
+    <h2>授業</h2>
+
+    <h3>発問</h3>
+
+    <p
+      id="question"
+      class="question"
+    ></p>
+
+  </div>
+
+
+  <script type="module">
+
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
+    // Firebaseの設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyARE4v_aZn606QafIKt3BoGCg82Fk04lKo",
+      authDomain: "doutokuaiapp.firebaseapp.com",
+      projectId: "doutokuaiapp",
+      storageBucket: "doutokuaiapp.firebasestorage.app",
+      messagingSenderId: "192277542082",
+      appId: "1:192277542082:web:d21654cf75692e0b28375b"
+    };
+
+
+    // Firebaseを初期化
+    const app = initializeApp(firebaseConfig);
+
+    // Firestoreを使用
+    const db = getFirestore(app);
+
+
+    // =========================
+    // 生徒：入室する
+    // =========================
+
+    const enterButton =
+      document.getElementById("enterButton");
+
+    enterButton.addEventListener("click", async () => {
+
+      const lessonId =
+        document
+          .getElementById("lessonId")
+          .value
+          .trim()
+          .toUpperCase();
+
+      const errorMessage =
+        document.getElementById("errorMessage");
+
+      const result =
+        document.getElementById("result");
+
+
+      // エラーメッセージを消す
+      errorMessage.textContent = "";
+
+
+      // 授業IDが入力されていない
+      if (!lessonId) {
+
+        errorMessage.textContent =
+          "授業IDを入力してください。";
+
+        return;
+      }
+
+
+      try {
+
+        // Firestoreから授業情報を取得
+        const lessonRef =
+          doc(db, "lessons", lessonId);
+
+        const lessonSnap =
+          await getDoc(lessonRef);
+
+
+        // 授業が存在しない
+        if (!lessonSnap.exists()) {
+
+          errorMessage.textContent =
+            "この授業IDの授業は見つかりませんでした。";
+
+          result.style.display = "none";
+
+          return;
+        }
+
+
+        // 授業データを取得
+        const lessonData =
+          lessonSnap.data();
+
+
+// 生徒用ページへ移動
+window.location.href =
+  "student.html?lessonId=" + lessonId;
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        errorMessage.textContent =
+          "授業情報の取得中にエラーが発生しました。";
+
+      }
+
+    });
+
+
+    // =========================
+    // 教師：授業を作成する
+    // =========================
+
+    const teacherButton =
+      document.getElementById("teacherButton");
+
+    teacherButton.addEventListener("click", () => {
+
+      // 教師用ページへ移動
+      window.location.href = "teacher.html";
+
+    });
+
+  </script>
+
+</body>
+</html>
